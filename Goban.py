@@ -1,19 +1,28 @@
-import pygame, time
+import pygame
+import urllib
+import json
 
-# set up the mixer
-#freq = 44100     # audio CD quality
-#bitsize = 16    # unsigned 16 bit
-#channels = 2     # 1 is mono, 2 is stereo
-#buffer = 4096    # number of samples (experiment to get right sound)
-#pygame.mixer.init(freq, bitsize, channels, buffer)
-pygame.mixer.init()
-#pygame.init()
+def play(filename):
+	pygame.mixer.init()
+	pygame.mixer.music.load(filename)
+	pygame.mixer.music.play()
 
-# optional volume 0 to 1.0
-#pygame.mixer.music.set_volume(0.75)
+	while pygame.mixer.music.get_busy():
+		pygame.time.Clock().tick(10)
 
-pygame.mixer.music.load('/tmp/a.mp3')
-pygame.mixer.music.play()
+playListURL = r'http://douban.fm/j/mine/playlist?type=n&channel=1&from=mainsite'
+channelURL = r'&channel=' + str(1)
+fromURL = r'&from=mainsite'
 
-while pygame.mixer.music.get_busy():
-	time.sleep(0.1)
+url = playListURL + channelURL + fromURL
+
+page_source = urllib.urlopen(url)
+pageData = page_source.read()
+jsonData = json.loads(pageData)
+songList = jsonData['song']
+
+for song in songList:
+	print(song['title'] + "  <<" + song['albumtitle'] + ">>" + " -- " + song['artist'])
+	print(song['url'])
+
+#play('test.mp3')
