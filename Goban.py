@@ -9,6 +9,10 @@ import codecs
 import threading
 import sys
 
+empty = threading.Semaphore(5)
+full = threading.Semaphore(0)
+queue = []
+
 def Output(s):
 	sys.stdout.write(s + ' ' * (70 - len(s)))
 	sys.stdout.flush()
@@ -32,10 +36,26 @@ def showDownloadProcess(blocks, block_size, total_size):
 	if percent > 30:
 		percent = 30
 	
-	ClearLine()
-	Output('[' + '=' * percent + '>' * (1 if percent < 30 else 0) + ' ' * (29 - percent) + ']' + '   ' + ('Downloading' if percent < 30 else 'Playing'))
+	#ClearLine()
+	#Output('[' + '=' * percent + '>' * (1 if percent < 30 else 0) + ' ' * (29 - percent) + ']' + '   ' + ('Downloading' if percent < 30 else 'Done'))
 
-def worker():
+def play_worker():
+	try:
+		while True:
+			full.acquire()
+			song, f = queue.pop(0)
+
+			#ClearLine()
+			#Output((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
+			#Output('\n')
+			print((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
+
+			play(f)
+			empty.release()
+	finally:
+		pygame.mixer.music.stop()
+
+def download_worker():
 	try:
 		while True:
 			playListURL = r'http://douban.fm/j/mine/playlist?type=n'
@@ -49,20 +69,15 @@ def worker():
 			jsonData = json.loads(pageData)
 			songList = jsonData['song']
 
-			for song in songList:
-				ClearLine() #Clear privious status line
-				Output((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
-				Output('\n')
+			for song_info in songList:
+				empty.acquire()
+				filename = '/tmp/' + song_info['url'].split('/')[-1]
 
-				donotClear = True
-			
-				#f, h = urllib.urlretrieve(r'http://mr4.douban.com/201210241519/0527423da2934ca66aa4c6aa00a04e69/view/song/small/p15413.mp3', '/tmp/a.mp3')
-				#print(song['title'])
-				f, h = urllib.urlretrieve(song['url'], '/tmp/a.mp3', showDownloadProcess)
-				play(f)
-
+				f, h = urllib.urlretrieve(song_info['url'], filename, showDownloadProcess)
+				queue.append((song_info, filename))
+				full.release()
 	finally:
-		pygame.mixer.music.stop()
+		pass
 
 locale.setlocale(locale.LC_ALL,"")
 pygame.mixer.init()
@@ -74,6 +89,7 @@ if len(sys.argv) < 2:
 channel = int(sys.argv[1])
 print('Playing channel ' + str(channel))
 
-worker()
+threading.Thread(target=play_worker).start()
+threading.Thread(target=download_worker).start()
 
 pygame.mixer.music.stop()
