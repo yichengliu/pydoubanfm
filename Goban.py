@@ -1,4 +1,5 @@
 import pygame
+import urllib2
 import urllib
 import json
 import time
@@ -59,12 +60,19 @@ def worker():
 				#print(song['title'])
 				f, h = urllib.urlretrieve(song['url'], '/tmp/a.mp3', showDownloadProcess)
 				play(f)
+
 	finally:
 		pygame.mixer.music.stop()
 
 locale.setlocale(locale.LC_ALL,"")
 pygame.mixer.init()
-channel = 1
+
+if len(sys.argv) < 2:
+	print('Provide channel')
+	exit()
+
+channel = int(sys.argv[1])
+print('Playing channel ' + str(channel))
 
 worker()
 
