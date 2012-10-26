@@ -99,6 +99,7 @@ def download_worker():
 locale.setlocale(locale.LC_ALL,"")
 pygame.mixer.init()
 volume_cache = -1
+paused = False
 
 if len(sys.argv) < 2:
 	print('Provide channel')
@@ -132,5 +133,13 @@ while True:
 		else:
 			pygame.mixer.music.set_volume(volume_cache)
 			volume_cache = -1
+
+	if c == 'p':
+		if paused:
+			pygame.mixer.music.unpause()
+			paused = False
+		else:
+			pygame.mixer.music.pause()
+			paused = True
 
 print('Bye')
