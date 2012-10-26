@@ -3,15 +3,32 @@ import urllib2
 import urllib
 import json
 import time
-import curses
 import locale
 import codecs
 import threading
 import sys
+import os
+import termios
 
 empty = threading.Semaphore(5)
 full = threading.Semaphore(0)
 queue = []
+
+TERMIOS = termios
+def getch():
+	fd = sys.stdin.fileno()
+	old = termios.tcgetattr(fd)
+	new = termios.tcgetattr(fd)
+	new[3] = new[3] & ~TERMIOS.ICANON & ~TERMIOS.ECHO
+	new[6][TERMIOS.VMIN] = 1
+	new[6][TERMIOS.VTIME] = 0
+	termios.tcsetattr(fd, TERMIOS.TCSANOW, new)
+	c = None
+	try:
+		c = os.read(fd, 1)
+	finally:
+		termios.tcsetattr(fd, TERMIOS.TCSAFLUSH, old)
+	return c
 
 def Output(s):
 	sys.stdout.write(s + ' ' * (70 - len(s)))
@@ -81,6 +98,7 @@ def download_worker():
 
 locale.setlocale(locale.LC_ALL,"")
 pygame.mixer.init()
+volume_cache = -1
 
 if len(sys.argv) < 2:
 	print('Provide channel')
@@ -89,7 +107,30 @@ if len(sys.argv) < 2:
 channel = int(sys.argv[1])
 print('Playing channel ' + str(channel))
 
-threading.Thread(target=play_worker).start()
-threading.Thread(target=download_worker).start()
+player = threading.Thread(target=play_worker)
+downloader = threading.Thread(target=download_worker)
 
-pygame.mixer.music.stop()
+player.daemon = True
+downloader.daemon = True
+
+player.start()
+downloader.start()
+
+while True:
+	c = getch()
+
+	if c == 'q':
+		break
+
+	if c == 'n':
+		pygame.mixer.music.stop()
+
+	if c == 'm':
+		if volume_cache == -1:
+			volume_cache = pygame.mixer.music.get_volume()
+			pygame.mixer.music.set_volume(0)
+		else:
+			pygame.mixer.music.set_volume(volume_cache)
+			volume_cache = -1
+
+print('Bye')
