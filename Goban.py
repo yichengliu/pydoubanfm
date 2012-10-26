@@ -92,7 +92,10 @@ def play_worker():
 
 			global current_sid
 			current_sid = song['sid']
+
 			play(f)
+			threading.Thread(target=report_worker, args=('e')).start()
+
 			current_sid = None
 			empty.release()
 	finally:
