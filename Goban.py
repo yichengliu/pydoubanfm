@@ -71,6 +71,12 @@ def play(filename):
 def report_worker(type_id):
 	url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_sid + '&channel=' + str(channel)
 	result = urllib2.urlopen(url).read()
+	jsonData = json.load(result)
+
+	result_code = jsonData['r']
+
+	if result_code != 0:
+		print('Error in report')
 
 def play_worker():
 	try:
