@@ -86,7 +86,7 @@ def play_worker():
 			#ClearLine()
 			#Output((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
 			#Output('\n')
-			print(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + ' (Liked!)' if song['like'] == 1 else '')
+			print(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + (' (Liked!)' if song['like'] == 1 else ''))
 
 			global current_sid
 			current_sid = song['sid']
@@ -145,12 +145,14 @@ if not os.path.exists(tmp_dir):
 
 pygame.mixer.init()
 volume = 1.0
+is_mute = False
 pygame.mixer.music.set_volume(volume)
 paused = False
 current_sid = None
 
 channel = int(sys.argv[1])
 print('Playing channel ' + str(channel))
+print('Press \'h\' for help')
 
 player = threading.Thread(target=play_worker)
 downloader = threading.Thread(target=download_worker)
@@ -167,14 +169,29 @@ while True:
 	if c == 'q':
 		break
 
+	if c == 'h':
+		manual = {
+			'q' : 'exit',
+			'n' : 'skip this song',
+			'm' : 'mute/unmute',
+			'j/k' : 'increase/decrease volume',
+			'p' : 'pause/unpause',
+			'r' : 'Add to favorate'
+		}
+
+		for key in manual:
+			print(key + ' ' + manual[key])
+
 	if c == 'n':
 		pygame.mixer.music.stop()
 
 	if c == 'm':
-		if volume_cache == -1:
-			pygame.mixer.music.set_volume(0)
-		else:
+		if is_mute:
 			pygame.mixer.music.set_volume(volume)
+			is_mute = False
+		else:
+			pygame.mixer.music.set_volume(0)
+			is_mute = True
 
 	if c == 'j':
 		volume = 0 if volume < 0.1 else (volume - 0.1)
