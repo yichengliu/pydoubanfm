@@ -2,7 +2,6 @@ import pygame
 import urllib2
 import urllib
 import json
-import time
 import threading
 import sys
 import os
@@ -62,17 +61,6 @@ def play(filename):
 	while pygame.mixer.music.get_busy():
 		pygame.time.Clock().tick(10)
 
-def showDownloadProcess(blocks, block_size, total_size):
-	percent = 30.0 * blocks * block_size / total_size
-
-	percent = int(percent)
-
-	if percent > 30:
-		percent = 30
-	
-	#ClearLine()
-	#Output('[' + '=' * percent + '>' * (1 if percent < 30 else 0) + ' ' * (29 - percent) + ']' + '   ' + ('Downloading' if percent < 30 else 'Done'))
-
 def report_worker(type_id):
 	url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_sid + '&channel=' + str(channel)
 	result = urllib2.urlopen(url).read()
@@ -83,9 +71,6 @@ def play_worker():
 			full.acquire()
 			song, f = queue.pop(0)
 
-			#ClearLine()
-			#Output((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
-			#Output('\n')
 			print(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + (' (Liked!)' if song['like'] == 1 else ''))
 
 			global current_sid
@@ -134,7 +119,7 @@ def download_worker():
 				empty.acquire()
 				filename = tmp_dir + song_info['url'].split('/')[-1]
 
-				urllib.urlretrieve(song_info['url'], filename, showDownloadProcess)
+				urllib.urlretrieve(song_info['url'], filename)
 
 				queue.append((song_info, filename))
 
