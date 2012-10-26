@@ -3,8 +3,6 @@ import urllib2
 import urllib
 import json
 import time
-import locale
-import codecs
 import threading
 import sys
 import os
@@ -88,7 +86,7 @@ def play_worker():
 			#ClearLine()
 			#Output((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
 			#Output('\n')
-			print((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
+			print(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + ' (Liked!)' if song['like'] == 1 else '')
 
 			global current_sid
 			current_sid = song['sid']
@@ -141,8 +139,6 @@ def download_worker():
 if len(sys.argv) < 2:
 	print('Provide channel')
 	exit()
-
-locale.setlocale(locale.LC_ALL,"")
 
 if not os.path.exists(tmp_dir):
 	os.mkdir(tmp_dir)
