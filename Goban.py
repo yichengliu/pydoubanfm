@@ -9,6 +9,9 @@ import threading
 import sys
 import os
 import termios
+import cookielib
+from cStringIO import StringIO
+from pysqlite2 import dbapi2 as sqlite
 
 empty = threading.Semaphore(5)
 full = threading.Semaphore(0)
@@ -30,6 +33,29 @@ def getch():
 	finally:
 		termios.tcsetattr(fd, TERMIOS.TCSAFLUSH, old)
 	return c
+
+# a useful function from others
+def sqlite2cookie(filename,host):
+    con = sqlite.connect(filename)
+    con.text_factory = str
+    cur = con.cursor()
+    cur.execute("select host, path, isSecure, expiry, name, value from moz_cookies where host like ?"
+            ,['%%%s%%' % host])
+    ftstr = ["FALSE","TRUE"]
+    s = StringIO()
+    s.write("""\
+# Netscape HTTP Cookie File
+# http://www.netscape.com/newsref/std/cookie_spec.html
+# This is a generated file!  Do not edit.
+""")
+    for item in cur.fetchall():
+        s.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
+            item[0], ftstr[item[0].startswith('.')], item[1],
+            ftstr[item[2]], item[3], item[4], item[5]))
+    s.seek(0)
+    cookie_jar = cookielib.MozillaCookieJar()
+    cookie_jar._really_load(s, '', True, True)
+    return cookie_jar
 
 def Output(s):
 	sys.stdout.write(s + ' ' * (70 - len(s)))
@@ -75,6 +101,17 @@ def play_worker():
 
 def download_worker():
 	try:
+		# get cookie
+		cookiejar = sqlite2cookie(u'/home/gods/.mozilla/firefox/nlq33w25.default/cookies.sqlite','douban')
+		opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
+		urllib2.install_opener(opener)
+
+		# post cookie
+		url='http://douban.fm/mine'
+		req=urllib2.Request(url)
+		req.add_header('User-Agent','Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)')
+		urllib2.urlopen(req).read()
+
 		while True:
 			playListURL = r'http://douban.fm/j/mine/playlist?type=n'
 			channelURL = r'&channel=' + str(channel)
@@ -82,7 +119,7 @@ def download_worker():
 	
 			url = playListURL + channelURL + fromURL
 
-			page_source = urllib.urlopen(url)
+			page_source = urllib2.urlopen(url)
 			pageData = page_source.read()
 			jsonData = json.loads(pageData)
 			songList = jsonData['song']
