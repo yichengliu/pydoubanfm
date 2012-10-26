@@ -57,14 +57,6 @@ def sqlite2cookie(filename,host):
     cookie_jar._really_load(s, '', True, True)
     return cookie_jar
 
-def Output(s):
-	sys.stdout.write(s + ' ' * (70 - len(s)))
-	sys.stdout.flush()
-
-def ClearLine():
-	sys.stdout.write('\r')
-	sys.stdout.flush()
-
 def play(filename):
 	pygame.mixer.music.load(filename)
 	pygame.mixer.music.play()
@@ -94,7 +86,10 @@ def play_worker():
 			#Output('\n')
 			print((song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist']).encode('utf_8'))
 
+			global current_sid
+			current_sid = song['sid']
 			play(f)
+			current_sid = None
 			empty.release()
 	finally:
 		pygame.mixer.music.stop()
@@ -149,6 +144,7 @@ pygame.mixer.init()
 volume = 1.0
 pygame.mixer.music.set_volume(volume)
 paused = False
+current_sid = None
 
 channel = int(sys.argv[1])
 print('Playing channel ' + str(channel))
@@ -192,6 +188,12 @@ while True:
 		else:
 			pygame.mixer.music.pause()
 			paused = True
+
+	if c == 'r':
+		if current_sid != None:
+			url = r'http://douban.fm/j/mine/playlist?type=r&status=p&sid=' + current_sid + '&channel=' + str(channel)
+			result = urllib2.urlopen(url).read()
+			print('Like this one!')
 
 #clean tmp files
 for dirname, dirnames, filenames in os.walk(tmp_dir):
