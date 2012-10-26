@@ -75,6 +75,10 @@ def showDownloadProcess(blocks, block_size, total_size):
 	#ClearLine()
 	#Output('[' + '=' * percent + '>' * (1 if percent < 30 else 0) + ' ' * (29 - percent) + ']' + '   ' + ('Downloading' if percent < 30 else 'Done'))
 
+def report_worker(type_id):
+	url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_sid + '&channel=' + str(channel)
+	result = urllib2.urlopen(url).read()
+
 def play_worker():
 	try:
 		while True:
@@ -191,8 +195,8 @@ while True:
 
 	if c == 'r':
 		if current_sid != None:
-			url = r'http://douban.fm/j/mine/playlist?type=r&status=p&sid=' + current_sid + '&channel=' + str(channel)
-			result = urllib2.urlopen(url).read()
+			report = threading.Thread(target=report_worker, args=('r'))
+			report.start()
 			print('Like this one!')
 
 #clean tmp files
