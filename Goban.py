@@ -92,7 +92,13 @@ def play_worker():
 			current_sid = song['sid']
 
 			play(f)
-			threading.Thread(target=report_worker, args=('e')).start()
+
+			global skip
+
+			if skip:
+				skip = False
+			else:
+				threading.Thread(target=report_worker, args=('e')).start()
 
 			current_sid = None
 			empty.release()
@@ -146,6 +152,7 @@ if not os.path.exists(tmp_dir):
 pygame.mixer.init()
 volume = 1.0
 is_mute = False
+skip = False
 pygame.mixer.music.set_volume(volume)
 paused = False
 current_sid = None
@@ -183,6 +190,7 @@ while True:
 			print(key + ' ' + manual[key])
 
 	if c == 'n':
+		skip = True
 		pygame.mixer.music.stop()
 
 	if c == 'm':
