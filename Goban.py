@@ -13,6 +13,7 @@ import termios
 empty = threading.Semaphore(5)
 full = threading.Semaphore(0)
 queue = []
+tmp_dir = '/tmp/Goban/'
 
 TERMIOS = termios
 def getch():
@@ -88,16 +89,21 @@ def download_worker():
 
 			for song_info in songList:
 				empty.acquire()
-				filename = '/tmp/' + song_info['url'].split('/')[-1]
+				filename = tmp_dir + song_info['url'].split('/')[-1]
 
-				f, h = urllib.urlretrieve(song_info['url'], filename, showDownloadProcess)
+				urllib.urlretrieve(song_info['url'], filename, showDownloadProcess)
+
 				queue.append((song_info, filename))
+
 				full.release()
 	finally:
 		pass
 
 locale.setlocale(locale.LC_ALL,"")
 pygame.mixer.init()
+
+if not os.path.exists(tmp_dir):
+	os.mkdir(tmp_dir)
 volume_cache = -1
 paused = False
 
@@ -141,5 +147,10 @@ while True:
 		else:
 			pygame.mixer.music.pause()
 			paused = True
+
+#clean tmp files
+for dirname, dirnames, filenames in os.walk(tmp_dir):
+	for filename in filenames:
+		os.remove(os.path.join(dirname, filename))
 
 print('Bye')
