@@ -99,17 +99,19 @@ def download_worker():
 	finally:
 		pass
 
-locale.setlocale(locale.LC_ALL,"")
-pygame.mixer.init()
-
-if not os.path.exists(tmp_dir):
-	os.mkdir(tmp_dir)
-volume_cache = -1
-paused = False
-
 if len(sys.argv) < 2:
 	print('Provide channel')
 	exit()
+
+locale.setlocale(locale.LC_ALL,"")
+
+if not os.path.exists(tmp_dir):
+	os.mkdir(tmp_dir)
+
+pygame.mixer.init()
+volume = 1.0
+pygame.mixer.music.set_volume(volume)
+paused = False
 
 channel = int(sys.argv[1])
 print('Playing channel ' + str(channel))
@@ -134,11 +136,17 @@ while True:
 
 	if c == 'm':
 		if volume_cache == -1:
-			volume_cache = pygame.mixer.music.get_volume()
 			pygame.mixer.music.set_volume(0)
 		else:
-			pygame.mixer.music.set_volume(volume_cache)
-			volume_cache = -1
+			pygame.mixer.music.set_volume(volume)
+
+	if c == 'j':
+		volume = 0 if volume < 0.1 else (volume - 0.1)
+		pygame.mixer.music.set_volume(volume)
+
+	if c == 'k':
+		volume = 1 if volume > 0.9 else (volume + 0.1)
+		pygame.mixer.music.set_volume(volume)
 
 	if c == 'p':
 		if paused:
