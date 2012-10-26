@@ -10,10 +10,17 @@ import cookielib
 from cStringIO import StringIO
 from pysqlite2 import dbapi2 as sqlite
 
+class NullPlaylistError(Exception):
+	def __init__(self, value):
+		self.value = value
+	def __str__(self):
+		return repr(self.value)
+
 empty = threading.Semaphore(5)
 full = threading.Semaphore(0)
 queue = []
 tmp_dir = '/tmp/Goban/'
+home_dir = os.path.expanduser('~')
 
 TERMIOS = termios
 def getch():
@@ -93,7 +100,7 @@ def play_worker():
 def download_worker():
 	try:
 		# get cookie
-		cookiejar = sqlite2cookie(u'/home/gods/.mozilla/firefox/nlq33w25.default/cookies.sqlite','douban')
+		cookiejar = sqlite2cookie(home_dir + '/.mozilla/firefox/nlq33w25.default/cookies.sqlite','douban')
 		opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
 		urllib2.install_opener(opener)
 
@@ -114,6 +121,10 @@ def download_worker():
 			pageData = page_source.read()
 			jsonData = json.loads(pageData)
 			songList = jsonData['song']
+
+			if len(songList) == 0:
+				print('Can\'t get play list, you must login douban using ff before you can use favorite channel')
+				raise NullPlaylistError
 
 			for song_info in songList:
 				empty.acquire()
