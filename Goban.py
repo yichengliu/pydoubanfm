@@ -10,12 +10,6 @@ import cookielib
 from cStringIO import StringIO
 from pysqlite2 import dbapi2 as sqlite
 
-class NullPlaylistError(Exception):
-	def __init__(self, value):
-		self.value = value
-	def __str__(self):
-		return repr(self.value)
-
 empty = threading.Semaphore(5)
 full = threading.Semaphore(0)
 queue = []
@@ -68,15 +62,22 @@ def play(filename):
 	while pygame.mixer.music.get_busy():
 		pygame.time.Clock().tick(10)
 
+
 def report_worker(type_id):
-	url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_sid + '&channel=' + str(channel)
-	result = urllib2.urlopen(url).read()
-	jsonData = json.load(result)
+	try:
+		url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_sid + '&channel=' + str(channel)
+		result = urllib2.urlopen(url).read()
+		jsonData = json.load(result)
 
-	result_code = jsonData['r']
+		result_code = jsonData['r']
 
-	if result_code != 0:
-		print('Error in report')
+		if result_code != 0:
+			print('Error in report')
+	except:
+		pass
+
+def clean_worker(filename):
+	os.remove(filename)
 
 def play_worker():
 	try:
@@ -98,12 +99,13 @@ def play_worker():
 			else:
 				threading.Thread(target=report_worker, args=('e')).start()
 
+			threading.Thread(target=clean_worker, args=(f,)).start()
 			current_sid = None
 			empty.release()
 	finally:
 		pygame.mixer.music.stop()
 
-def download_worker():
+def download_worker(channel):
 	try:
 		# get cookie
 		cookiejar = sqlite2cookie(home_dir + '/.mozilla/firefox/nlq33w25.default/cookies.sqlite','douban')
@@ -115,34 +117,40 @@ def download_worker():
 		req=urllib2.Request(url)
 		req.add_header('User-Agent','Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)')
 		urllib2.urlopen(req).read()
+	except:
+		print('Cannot get cookie!')
 
-		while True:
-			playListURL = r'http://douban.fm/j/mine/playlist?type=n'
-			channelURL = r'&channel=' + str(channel)
-			fromURL = r'&from=mainsite'
-	
-			url = playListURL + channelURL + fromURL
+		if int(channel) < 0:
+			print('Can\'t get play list, you must login douban using ff before you can use favorite channel')
+			print('Press \'q\' to exit...')
+			return
 
-			page_source = urllib2.urlopen(url)
-			pageData = page_source.read()
-			jsonData = json.loads(pageData)
-			songList = jsonData['song']
+	while True:
+		playListURL = r'http://douban.fm/j/mine/playlist?type=n'
+		channelURL = r'&channel=' + channel
+		fromURL = r'&from=mainsite'
 
-			if len(songList) == 0:
-				print('Can\'t get play list, you must login douban using ff before you can use favorite channel')
-				raise NullPlaylistError
+		url = playListURL + channelURL + fromURL
 
-			for song_info in songList:
-				empty.acquire()
-				filename = tmp_dir + song_info['url'].split('/')[-1]
+		page_source = urllib2.urlopen(url)
+		pageData = page_source.read()
+		jsonData = json.loads(pageData)
+		songList = jsonData['song']
 
-				urllib.urlretrieve(song_info['url'], filename)
+		if len(songList) == 0:
+			print('Can\'t get play list, something wrong')
+			print('Press \'q\' to exit...')
+			return
 
-				queue.append((song_info, filename))
+		for song_info in songList:
+			empty.acquire()
+			filename = tmp_dir + song_info['url'].split('/')[-1]
 
-				full.release()
-	finally:
-		pass
+			urllib.urlretrieve(song_info['url'], filename)
+
+			queue.append((song_info, filename))
+
+			full.release()
 
 if len(sys.argv) < 2:
 	print('Provide channel')
@@ -159,12 +167,12 @@ pygame.mixer.music.set_volume(volume)
 paused = False
 current_sid = None
 
-channel = int(sys.argv[1])
-print('Playing channel ' + str(channel))
+channel = sys.argv[1]
+print('Playing channel ' + channel)
 print('Press \'h\' for help')
 
 player = threading.Thread(target=play_worker)
-downloader = threading.Thread(target=download_worker)
+downloader = threading.Thread(target=download_worker, args=(channel,))
 
 player.daemon = True
 downloader.daemon = True
