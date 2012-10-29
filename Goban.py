@@ -32,6 +32,14 @@ def getch():
 		termios.tcsetattr(fd, TERMIOS.TCSAFLUSH, old)
 	return c
 
+def Output(s, end='\n'):
+		sys.stdout.write('\r' + s + end)
+		sys.stdout.flush()
+
+def clear_line():
+	Output('\r' + ' ' * 20, end='')
+	Output('\r', end='')
+
 # a useful function from others
 def sqlite2cookie(filename,host):
     con = sqlite.connect(filename)
@@ -85,7 +93,7 @@ def play_worker():
 			full.acquire()
 			song, f = queue.pop(0)
 
-			print(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + (' (Liked!)' if song['like'] == 1 else ''))
+			Output(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + (' (Liked!)' if song['like'] == 1 else ''))
 
 			global current_sid
 			current_sid = song['sid']
@@ -180,14 +188,7 @@ downloader.daemon = True
 player.start()
 downloader.start()
 
-while True:
-	c = getch()
-
-	if c == 'q':
-		break
-
-	if c == 'h':
-		manual = {
+manual = {
 			'q' : 'exit',
 			'n' : 'skip this song',
 			'm' : 'mute/unmute',
@@ -196,8 +197,15 @@ while True:
 			'r' : 'Add to favorate'
 		}
 
+while True:
+	c = getch()
+
+	if c == 'q':
+		break
+
+	if c == 'h':
 		for key in manual:
-			print(key + ' ' + manual[key])
+			Output(key + ' ' + manual[key])
 
 	if c == 'n':
 		skip = True
@@ -223,19 +231,23 @@ while True:
 		if paused:
 			pygame.mixer.music.unpause()
 			paused = False
+			clear_line()
 		else:
 			pygame.mixer.music.pause()
+			Output('Paused', end='')
 			paused = True
 
 	if c == 'r':
 		if current_sid != None:
 			report = threading.Thread(target=report_worker, args=('r'))
 			report.start()
-			print('Like this one!')
+			Output('Like this one!')
 
+pygame.mixer.music.stop()
 #clean tmp files
 for dirname, dirnames, filenames in os.walk(tmp_dir):
 	for filename in filenames:
 		os.remove(os.path.join(dirname, filename))
 
-print('Bye')
+clear_line()
+Output('Bye')
