@@ -9,6 +9,7 @@ import termios
 import cookielib
 from cStringIO import StringIO
 from pysqlite2 import dbapi2 as sqlite
+import shutil
 
 empty = threading.Semaphore(5)
 full = threading.Semaphore(0)
@@ -73,7 +74,7 @@ def play(filename):
 
 def report_worker(type_id):
 	try:
-		url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_sid + '&channel=' + str(channel)
+		url = r'http://douban.fm/j/mine/playlist?type=' + type_id + '&status=p&sid=' + current_song['sid'] + '&channel=' + str(channel)
 		result = urllib2.urlopen(url).read()
 		jsonData = json.load(result)
 
@@ -95,8 +96,9 @@ def play_worker():
 
 			Output(song['title'] + ' <<' + song['albumtitle'] + '>> -- ' + song['artist'] + (' (Liked!)' if song['like'] == 1 else ''))
 
-			global current_sid
-			current_sid = song['sid']
+			global current_song, current_file
+			current_song = song
+			current_file = f
 
 			play(f)
 
@@ -108,7 +110,8 @@ def play_worker():
 				threading.Thread(target=report_worker, args=('e')).start()
 
 			threading.Thread(target=clean_worker, args=(f,)).start()
-			current_sid = None
+			current_song = None
+			current_file = None
 			empty.release()
 	finally:
 		pygame.mixer.music.stop()
@@ -173,7 +176,8 @@ is_mute = False
 skip = False
 pygame.mixer.music.set_volume(volume)
 paused = False
-current_sid = None
+current_song = None
+current_file = None
 
 channel = sys.argv[1]
 print('Playing channel ' + channel)
@@ -194,7 +198,8 @@ manual = {
 			'm' : 'mute/unmute',
 			'j/k' : 'increase/decrease volume',
 			'p' : 'pause/unpause',
-			'r' : 'Add to favorate'
+			'r' : 'Add to favorate',
+			's' : 'Save the mp3 file in current directory'
 		}
 
 while True:
@@ -238,10 +243,16 @@ while True:
 			paused = True
 
 	if c == 'r':
-		if current_sid != None:
+		if current_song != None:
 			report = threading.Thread(target=report_worker, args=('r'))
 			report.start()
 			Output('Like this one!')
+
+	if c == 's':
+		if current_file != None:
+			target_filename = current_song['title'] + '.mp3'
+			shutil.copyfile(current_file, os.path.join(os.getcwd(), target_filename))
+			Output('Saved!')
 
 pygame.mixer.music.stop()
 #clean tmp files
